@@ -1,0 +1,79 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String        @id @default(uuid())
+  name          String
+  email         String        @unique
+  passwordHash  String
+  createdAt     DateTime      @default(now())
+  memberships   BoardMember[]
+  ownedBoards   Board[]       @relation("BoardOwner")
+  assignedTasks Task[]        @relation("TaskAssignee")
+  activities    Activity[]
+}
+
+model Board {
+  id        String        @id @default(uuid())
+  title     String
+  ownerId   String
+  owner     User          @relation("BoardOwner", fields: [ownerId], references: [id])
+  members   BoardMember[]
+  columns   Column[]
+  activities Activity[]
+  createdAt DateTime      @default(now())
+}
+
+model BoardMember {
+  id      String @id @default(uuid())
+  boardId String
+  userId  String
+  role    Role   @default(MEMBER)
+  board   Board  @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  user    User   @relation(fields: [userId], references: [id])
+
+  @@unique([boardId, userId])
+}
+
+enum Role {
+  ADMIN
+  MEMBER
+}
+
+model Column {
+  id        String @id @default(uuid())
+  title     String
+  order     Int
+  boardId   String
+  board     Board  @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  tasks     Task[]
+}
+
+model Task {
+  id          String    @id @default(uuid())
+  title       String
+  description String?
+  order       Int
+  dueDate     DateTime?
+  columnId    String
+  column      Column    @relation(fields: [columnId], references: [id], onDelete: Cascade)
+  assigneeId  String?
+  assignee    User?     @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  createdAt   DateTime  @default(now())
+}
+
+model Activity {
+  id        String   @id @default(uuid())
+  boardId   String
+  board     Board    @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  message   String
+  createdAt DateTime @default(now())
+}
